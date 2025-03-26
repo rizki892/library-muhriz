@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,12 +17,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 
+@Slf4j
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
+    private final TokenBlackListService tokenBlackListService;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil,TokenBlackListService tokenBlackListService) {
         this.jwtUtil = jwtUtil;
+        this.tokenBlackListService = tokenBlackListService;
     }
 
     @Override
@@ -29,33 +33,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         final String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            System.out.println("Token JWT tidak ditemukan di request.");
+            log.warn("Token JWT tidak ditemukan di request.");
             chain.doFilter(request, response);
             return;
         }
 
         final String token = authHeader.substring(7);
+        if (tokenBlackListService.isTokenBlacklisted(token)) {
+            log.warn("Token telah di-blacklist: {}", token);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Token tidak valid atau sudah logout.");
+            return;
+        }
+
         final String userEmail = jwtUtil.extractEmail(token);
         final String role = jwtUtil.extractRole(token);
 
-        System.out.println("Mendeteksi Token JWT: " + token);
-        System.out.println("Email dari Token: " + userEmail);
-        System.out.println("Role dari Token: " + role);
+        log.info("Mendeteksi Token JWT: {}", token);
+        log.info("Email dari Token: {}", userEmail);
+        log.info("Role dari Token: {}", role);
 
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = new User(userEmail, "", Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role)));
+            UserDetails userDetails = new User(userEmail, "", Collections.emptyList());
 
-            UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            var authToken = new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities()
+            );
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
             SecurityContextHolder.getContext().setAuthentication(authToken);
-            System.out.println("Autentikasi berhasil untuk user: " + userEmail + " dengan role: " + role);
-        } else {
-            System.out.println("Autentikasi gagal atau user sudah terautentikasi.");
         }
 
         chain.doFilter(request, response);
     }
+
 
 }

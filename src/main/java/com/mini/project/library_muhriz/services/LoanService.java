@@ -29,26 +29,32 @@ public class LoanService {
     @Autowired
     private JwtUtil jwtUtil;
 
-    public String requestLoan(LoanRequest request) throws RuntimeException {
+    public String requestLoan(LoanRequest request) {
         String email = jwtUtil.getCurrentUserEmail();
         if (email == null) {
-            throw new RuntimeException("User tidak terautentikasi");
+            return "User tidak terautentikasi";
         }
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User tidak ditemukan"));
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            return "User tidak ditemukan";
+        }
+        User user = userOpt.get();
 
-        Book book = bookRepository.findById(request.getBookId())
-                .orElseThrow(() -> new RuntimeException("Buku tidak ditemukan"));
+        Optional<Book> bookOpt = bookRepository.findById(request.getBookId());
+        if (bookOpt.isEmpty()) {
+            return "Buku tidak ditemukan";
+        }
+        Book book = bookOpt.get();
 
         if (book.getDeletedAt() != null) {
-            throw new RuntimeException("Buku ini telah dihapus dan tidak bisa dipinjam");
+            return "Buku ini telah dihapus dan tidak bisa dipinjam";
         }
 
         // Periksa apakah buku sedang dalam peminjaman dengan status PENDING atau ACCEPTED
-        Loan existingLoan = loanRepository.findByBookAndStatusIn(book,  Arrays.asList(LoanStatus.PENDING, LoanStatus.ACCEPTED));
-        if (existingLoan!=null) {
-            throw new RuntimeException("Buku ini sedang dalam proses peminjaman oleh pengguna lain.");
+        Loan existingLoan = loanRepository.findByBookAndStatusIn(book, Arrays.asList(LoanStatus.PENDING, LoanStatus.ACCEPTED));
+        if (existingLoan != null) {
+            return "Buku ini sedang dalam proses peminjaman oleh pengguna lain.";
         }
 
         // Buat peminjaman baru
@@ -62,6 +68,7 @@ public class LoanService {
         loanRepository.save(loan);
         return "Pengajuan peminjaman berhasil, menunggu persetujuan admin";
     }
+
 
 
 
