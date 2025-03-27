@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
@@ -16,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -49,15 +51,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String userEmail = jwtUtil.extractEmail(token);
         final String role = jwtUtil.extractRole(token);
 
+        // 🔥 Tambahkan authorities
+        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+
         log.info("Mendeteksi Token JWT: {}", token);
         log.info("Email dari Token: {}", userEmail);
         log.info("Role dari Token: {}", role);
+        log.info("Authorities dari Token: {}", authorities);
 
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = new User(userEmail, "", Collections.emptyList());
+            // 🔥 Pastikan UserDetails memiliki authorities
+            UserDetails userDetails = new User(userEmail, "", authorities);
 
             var authToken = new UsernamePasswordAuthenticationToken(
-                    userDetails, null, userDetails.getAuthorities()
+                    userDetails, null, authorities // 🔥 Gunakan authorities yang benar
             );
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
@@ -66,6 +73,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         chain.doFilter(request, response);
     }
+
 
 
 }
