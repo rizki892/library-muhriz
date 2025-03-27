@@ -11,8 +11,8 @@ Pastikan Anda telah menginstal:
 
 ### 2️⃣ Clone Repository
 ```sh
-git clone https://github.com/username/repository-name.git
-cd repository-name
+git clone https://github.com/rizki892/library-muhriz.git
+cd library-muhriz
 ```
 
 ### 3️⃣ Konfigurasi Database
@@ -23,7 +23,7 @@ CREATE DATABASE library_muhriz;
 ```
 
 ### 4️⃣ Konfigurasi Environment
-Buat file `.env` atau sesuaikan `application.properties`:
+Buat file  `application.properties`:
 
 ```
 spring.datasource.url=jdbc:postgresql://localhost:5432/library_muhriz
