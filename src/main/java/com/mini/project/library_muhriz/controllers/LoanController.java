@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -43,6 +42,17 @@ public class LoanController {
                 .map(this::convertToLoanResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.success("Daftar buku yang sedang dipinjam", activeLoans));
+    }
+    @PutMapping("/accept")
+    public ResponseEntity<ApiResponse<String>>acceptLoan(@RequestBody LoanRequest request){
+        String message = loanService.acceptLoan(request);
+        return ResponseEntity.ok(ApiResponse.success(message));
+    }
+
+    @PutMapping("/returned")
+    public ResponseEntity<ApiResponse<String>>returnLoan(@RequestBody LoanRequest request){
+        String message = loanService.returnLoan(request);
+        return ResponseEntity.ok(ApiResponse.success(message));
     }
 
     private LoanResponse convertToLoanResponse(Loan loan) {
